@@ -1,0 +1,178 @@
+<?xml version="1.0" ?>
+<resource class="wxActivityIndicator">
+  <object class="wxFrame" name="MainFrame">
+    <object class="wxBoxSizer">
+      <object class="sizeritem">
+        <object class="wxBoxSizer">
+          <object class="spacer"/>
+          <object class="sizeritem">
+            <object class="wxStaticBoxSizer">
+              <object class="sizeritem">
+                <object class="wxBoxSizer">
+                  <object class="sizeritem">
+                    <object class="wxStaticText">
+                      <label>Include:</label>
+                    </object>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxTextCtrl" name="include"/>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxStaticText">
+                      <label>Exclude:</label>
+                    </object>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxTextCtrl" name="exclude"/>
+                  </object>
+                  <orient>wxHORIZONTAL</orient>
+                </object>
+                <flag>wxEXPAND</flag>
+              </object>
+              <object class="spacer">
+                <size>4</size>
+              </object>
+              <object class="sizeritem">
+                <object class="wxBoxSizer">
+                  <object class="sizeritem">
+                    <object class="wxStaticText">
+                      <label>Text:</label>
+                    </object>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxTextCtrl" name="text"/>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxStaticText">
+                      <label>Match case:</label>
+                    </object>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxCheckBox" name="match_case"/>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxStaticText">
+                      <label>Regex:</label>
+                    </object>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxCheckBox" name="regex"/>
+                  </object>
+                  <orient>wxHORIZONTAL</orient>
+                </object>
+                <flag>wxEXPAND</flag>
+              </object>
+              <object class="spacer"/>
+              <object class="sizeritem">
+                <object class="wxBoxSizer">
+                  <object class="sizeritem">
+                    <object class="wxStaticText">
+                      <label>Folder</label>
+                    </object>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxTextCtrl" name="directory"/>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxButton" name="browse">
+                      <label>Browse</label>
+                    </object>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxStaticText">
+                      <label>Recurse:</label>
+                    </object>
+                  </object>
+                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxCheckBox" name="recurse">
+                      <checked>1</checked>
+                    </object>
+                  </object>
+                  <orient>wxHORIZONTAL</orient>
+                </object>
+                <flag>wxEXPAND</flag>
+              </object>
+              <label>Options</label>
+              <orient>wxVERTICAL</orient>
+            </object>
+            <option>1</option>
+            <flag>wxEXPAND|wxALIGN_LEFT</flag>
+          </object>
+          <object class="spacer">
+            <size>4</size>
+          </object>
+          <object class="sizeritem">
+            <object class="wxStaticBoxSizer">
+              <object class="sizeritem">
+                <object class="wxButton" name="start">
+                  <label>Start</label>
+                  <default>1</default>
+                </object>
+                <flag>wxEXPAND</flag>
+              </object>
+              <object class="spacer"/>
+              <object class="sizeritem">
+                <object class="wxButton" name="stop">
+                  <label>Stop</label>
+                </object>
+                <flag>wxEXPAND</flag>
+              </object>
+              <label>Control</label>
+              <orient>wxVERTICAL</orient>
+              <object class="sizeritem">
+                <object class="wxGauge" name="gauge"/>
+                <flag>wxTOP</flag>
+                <border>10</border>
+              </object>
+            </object>
+            <flag>wxEXPAND|wxALIGN_RIGHT</flag>
+          </object>
+          <orient>wxHORIZONTAL</orient>
+        </object>
+        <option>0</option>
+        <flag>wxEXPAND</flag>
+      </object>
+      <orient>wxVERTICAL</orient>
+      <object class="spacer">
+        <size>4</size>
+      </object>
+      <object class="sizeritem">
+        <object class="wxStaticBoxSizer">
+          <label>Matches</label>
+          <orient>wxVERTICAL</orient>
+          <object class="sizeritem">
+            <object class="wxSplitterWindow" name="matched_spliter">
+              <object class="wxListCtrl" name="matched_files">
+                <size>200,300</size>
+                <style>wxLC_REPORT</style>
+              </object>
+              <object class="wxListCtrl" name="matched_lines">
+                <size>200,200</size>
+                <style>wxLC_REPORT</style>
+              </object>
+              <orientation>vertical</orientation>
+            </object>
+            <option>1</option>
+            <flag>wxEXPAND</flag>
+          </object>
+        </object>
+        <option>1</option>
+        <flag>wxEXPAND</flag>
+      </object>
+    </object>
+    <size>1000,500</size>
+    <title>File Searcher</title>
+  </object>
+</resource>
