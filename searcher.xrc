@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<resource class="wxActivityIndicator">
+<resource class="wxSplitterWindow">
   <object class="wxFrame" name="MainFrame">
     <object class="wxBoxSizer">
       <object class="sizeritem">
@@ -148,21 +148,14 @@
       <object class="spacer">
         <size>4</size>
       </object>
+      
       <object class="sizeritem">
         <object class="wxStaticBoxSizer">
           <label>Matches</label>
           <orient>wxVERTICAL</orient>
           <object class="sizeritem">
-            <object class="wxSplitterWindow" name="matched_spliter">
-              <object class="wxListCtrl" name="matched_files">
-                <size>200,300</size>
-                <style>wxLC_REPORT</style>
-              </object>
-              <object class="wxListCtrl" name="matched_lines">
-                <size>200,200</size>
-                <style>wxLC_REPORT</style>
-              </object>
-              <orientation>vertical</orientation>
+            <object class="wxPanel" name="tree_list_panel">
+              <size>1000, 300</size>
             </object>
             <option>1</option>
             <flag>wxEXPAND</flag>

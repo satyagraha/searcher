@@ -12,49 +12,13 @@ import threading
 import time
 
 import  wx
+import  wx.gizmos
 from wx import xrc
 
 #----------------------------------------------------------------------
 '''
 TBD
 '''
-
-###############################################################################
-
-class CountEvent(wx.PyCommandEvent):
-    
-    event_type = wx.NewEventType()
-    event_binding = wx.PyEventBinder(event_type, 1)
-    
-    """Event to signal that a value is ready"""
-    def __init__(self, etype, eid, value=None):
-        """Creates the event object"""
-        wx.PyCommandEvent.__init__(self, etype, eid)
-        self._value = value
-
-    def get_value(self):
-        """Returns the value from the event.
-        @return: the value of this event
-        """
-        return self._value
-    
-class CountingThread(threading.Thread):
-    def __init__(self, parent, value):
-        """
-        @param parent: The gui object that should recieve the value
-        @param value: value to 'calculate' to
-        """
-        threading.Thread.__init__(self)
-        self._parent = parent
-        self._value = value
-
-    def run(self):
-        """Overrides Thread.run. Don't call this directly its called internally
-        when you call Thread.start().
-        """
-        time.sleep(5) # our simulated calculation time
-        evt = CountEvent(CountEvent.event_type, -1, self._value)
-        wx.PostEvent(self._parent, evt)
 
 ###############################################################################
 
@@ -84,6 +48,9 @@ class MatchResult:
         self.line_text = line_text
                 
 class MatchingThread(threading.Thread):
+    
+    finished = MatchResult(None, None, None, None)
+    
     def __init__(self, match_criteria, callback):
         """
         @param parent: The gui object that should recieve the value
@@ -105,17 +72,22 @@ class MatchingThread(threading.Thread):
 #             // filter filenames
             for filename in filenames:
                 if not self._running:
+                    self._finished()
                     return
                 if not self._match_criteria.is_matching_filename(filename):
                     continue
 #                 filepath = os.path.join(dir_path, filename)
                 match_result = MatchResult(dir_path, filename, 1, "result")
                 self._callback(self, match_result)
-                time.sleep(0.1)
+#                 time.sleep(0.2)
+        self._finished()
 
     def stop(self):
         print self, "stop"
         self._running = False
+        
+    def _finished(self):
+        self._callback(self, MatchingThread.finished)
         
 ###############################################################################
             
@@ -159,24 +131,6 @@ class MatchAdapter:
             event = MatchEvent(MatchEvent.event_type, -1, match_result)
             wx.PostEvent(self._parent, event)
 
-class OldMatchingThread(threading.Thread):
-    def __init__(self, parent, value):
-        """
-        @param parent: The gui object that should recieve the value
-        @param value: value to 'calculate' to
-        """
-        threading.Thread.__init__(self)
-        self._parent = parent
-        self._value = value
-
-    def run(self):
-        """Overrides Thread.run. Don't call this directly its called internally
-        when you call Thread.start().
-        """
-        time.sleep(5) # our simulated calculation time
-        evt = CountEvent(CountEvent.event_type, -1, self._value)
-        wx.PostEvent(self._parent, evt)
-            
 ###############################################################################
 
 class Searcher:
@@ -205,13 +159,47 @@ class Searcher:
 #         self.frame.Bind(CountEvent.event_binding, self._on_Count)
         self.frame.Bind(MatchEvent.event_binding, self._on_Match)
         
-        self._matched_splitter = self._get_control('matched_spliter')
-        self._matched_splitter.SetSashPosition(800)
+#         self._matched_splitter = self._get_control('matched_spliter')
+#         self._matched_splitter.SetSashPosition(800)
+#         
+#         self._matched_files = self._get_control('matched_files')
+#         self._matched_files.InsertColumn(0, "Name", width=200)
+#         self._matched_files.InsertColumn(1, "Location", width=600)
+        self._tree_list_panel = self._get_control("tree_list_panel")
+#        self._tree_list_panel.SetSize(size=(400, 300))
+        tree_list_box = wx.BoxSizer(wx.VERTICAL)
+
+        self._tree_list = wx.gizmos.TreeListCtrl(self._tree_list_panel, -1, style =
+                                        wx.TR_DEFAULT_STYLE
+                                        #| wx.TR_HIDE_ROOT
+                                        #| wx.TR_HAS_BUTTONS
+                                        #| wx.TR_TWIST_BUTTONS
+                                        #| wx.TR_ROW_LINES
+                                        #| wx.TR_COLUMN_LINES
+                                        #| wx.TR_NO_LINES 
+                                        | wx.TR_FULL_ROW_HIGHLIGHT
+                                   )
+        tree_list_box.Add(self._tree_list, 1, wx.EXPAND)
         
-        self._matched_files = self._get_control('matched_files')
-        self._matched_files.InsertColumn(0, "Name", width=200)
-        self._matched_files.InsertColumn(1, "Location", width=600)
+        self._tree_list_panel.SetSizer(tree_list_box)
+
+#         self._tree_list.SetSize(size=(300, 200))
+
+        isz = (16,16)
+        self._image_list = wx.ImageList(isz[0], isz[1])
+        self._fldridx     = self._image_list.Add(wx.ArtProvider_GetBitmap(wx.ART_FOLDER,      wx.ART_OTHER, isz))
+        self._fldropenidx = self._image_list.Add(wx.ArtProvider_GetBitmap(wx.ART_FILE_OPEN,   wx.ART_OTHER, isz))
+        self._fileidx     = self._image_list.Add(wx.ArtProvider_GetBitmap(wx.ART_NORMAL_FILE, wx.ART_OTHER, isz))
+        self._tree_list.SetImageList(self._image_list)
+
+        # create some columns
+        self._tree_list.AddColumn("Path", flag=wx.COL_RESIZABLE)
+        self._tree_list.AddColumn("Text", flag=wx.COL_RESIZABLE)
+        self._tree_list.SetMainColumn(0) # the one with the tree in it...
+        self._tree_list.SetColumnWidth(0, 400)
         
+#         self._tree_root = None
+#         self._tree_root = self._tree_list.AddRoot("The Root Item")
         
 #         self._font_name_c = self._get_control('FontName')
 #         self.frame.Bind(wx.EVT_LISTBOX, self._redraw_sample_text, id=self._font_name_c.GetId())
@@ -268,10 +256,12 @@ class Searcher:
         print 'start'
         if self._match_adapter:
             self._match_adapter.stop()
-#         worker = CountingThread(self.frame, 99)
-#         worker.start()
-        self._match_data = {}
-        match_criteria = MatchCriteria("D:/development", [".git", ".svn"], ["*.py", "*.bat", "*.java"], "fred")
+        self._start_path = os.path.normpath("D:/development/python")
+        self._tree_list.DeleteAllItems()
+        self._tree_root = self._tree_list.AddRoot(self._start_path)
+        self._matched_dirs = {}
+        self._matched_files = {}
+        match_criteria = MatchCriteria(self._start_path, [".git", ".svn"], ["*.py", "*.bat", "*.java"], "fred")
         self._match_adapter = MatchAdapter(self.frame, match_criteria)
         self._match_adapter.start()
         self._gauge.Pulse()
@@ -281,80 +271,50 @@ class Searcher:
         if (self._match_adapter):
             self._match_adapter.stop()
             self._match_adapter = None
-        self._gauge.SetValue(0)
+            self._finished()
         
-    def _on_Count(self, evt):
-        print '_on_Count'
-        print evt.get_value()
-                
     def _on_Match(self, evt):
         print '_on_Match'
         if self._match_adapter:
             match_result = evt.get_value()
             print match_result.__dict__
-            match_key = (match_result.dir_path, match_result.filename)
-            if match_key in self._match_data:
-                # existing file
-                self._match_data[match_key].append(match_result)
-                print "count: ", len(self._match_data[match_key])
+            if match_result == MatchingThread.finished:
+                self._finished()
             else:
-                # new file
-                self._match_data[match_key] = [match_result]
+                self._handle_match(match_result)
             
-                                
-#     def _redraw_sample_text(self, event):
-#         font_name = self._font_name_c.GetStringSelection()
-#         if not font_name:
-#             return
-#         font_size = self._font_size_c.GetValue()
-#         font_weight = wx.FONTWEIGHT_BOLD if self._font_weight_c.GetValue() else wx.FONTWEIGHT_NORMAL
-#         font_style = wx.FONTSTYLE_ITALIC if self._font_style_c.GetValue() else wx.FONTSTYLE_NORMAL
-#         underline = False
-#         font = wx.Font(font_size, wx.DEFAULT, font_style, font_weight, underline, font_name)
-#         self._sample_text_c.SetFont(font)
-#         self._sample_text_c.SetStyle(0, len(self._sample_text_c.GetValue()), wx.TextAttr(self._colour))
-#         #if wx.Platform == "__WXMAC__": self.Refresh()
+    def _finished(self):
+        print '_finished'
+        self._gauge.SetValue(0)
         
-#     def _refresh_fonts(self, event):
-#         current_font = self._font_name_c.GetStringSelection()
-#         font_enum = wx.FontEnumerator()
-#         font_enum.EnumerateFacenames()
-#         font_names = [name for name in font_enum.GetFacenames() if not name.startswith('@')]
-#         font_names.sort()
-#         self._font_name_c.Set(font_names)
-#         if (not event):
-#             current_font = font_names[0]
-#         self._font_name_c.SetStringSelection(current_font)
-#         #self._font_name_c.SetFirstItemString(current_font)
+    def _handle_match(self, match_result):
+        print '_handle_match'
+        if match_result.dir_path not in self._matched_dirs:
+            self._matched_dirs[match_result.dir_path] = self._add_dir_node(match_result.dir_path)
+        dir_node = self._matched_dirs[match_result.dir_path]
+        match_file_key = (match_result.dir_path, match_result.filename)
+        if match_file_key not in self._matched_files:
+            self._matched_files[match_file_key] = self._add_file_node(dir_node, match_file_key)
             
-#     def _colour_picked(self, event):
-#         print "Colour picked", event.GetColour()
-#         self._colour = event.GetColour()
-#         colour_rgb = self._colour.red << 16 | self._colour.green << 8 | self._colour.blue
-#         hex_value = "%0.6x" % colour_rgb
-#         print "Colour hex_value", hex_value
-#         self._colour_value_c.SetValue(hex_value)
-#         self._redraw_sample_text(event)
+    def _add_dir_node(self, dir_path):
+        first_child = self._tree_list.GetFirstChild(self._tree_root)[0]
+        rel_dir_path = os.path.relpath(dir_path, self._start_path)
+        dir_node = self._tree_list.AppendItem(self._tree_root, rel_dir_path)
+        self._tree_list.SetItemImage(dir_node, self._fldridx, which = wx.TreeItemIcon_Normal)
+        self._tree_list.SetItemImage(dir_node, self._fldropenidx, which = wx.TreeItemIcon_Expanded)
+        if not first_child.IsOk():
+            self._tree_list.Expand(self._tree_root)
+        return dir_node
 
-#     def _colour_value_changed(self, event):
-#         print "Colour value changed"
-#         hex_value = '#' + self._colour_value_c.GetValue()
-#         self._colour = wx.Colour(*HTMLColorToRGB(hex_value))
-#         self._colour_picker_c.SetColour(self._colour) 
-#         self._redraw_sample_text(event)
-        
-###############################################################################
-
-# def HTMLColorToRGB(colorstring):
-#     """ convert #RRGGBB to an (R, G, B) tuple """
-#     colorstring = colorstring.strip()
-#     if colorstring[0] == '#': colorstring = colorstring[1:]
-#     if len(colorstring) != 6:
-#         raise ValueError, "input #%s is not in #RRGGBB format" % colorstring
-#     r, g, b = colorstring[:2], colorstring[2:4], colorstring[4:]
-#     r, g, b = [int(n, 16) for n in (r, g, b)]
-#     return (r, g, b)
-        
+    def _add_file_node(self, dir_node, (dir_path, filename)):
+        first_child = self._tree_list.GetFirstChild(dir_node)[0]
+        file_node = self._tree_list.AppendItem(dir_node, filename)
+        self._tree_list.SetItemImage(file_node, self._fileidx, which = wx.TreeItemIcon_Normal)
+        if not first_child.IsOk():
+            self._tree_list.Expand(dir_node)
+        return file_node
+            
+    
 ###############################################################################
 
 def runAppXRC(resource_dir, resource_name):
