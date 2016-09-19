@@ -22,6 +22,13 @@ TBD
 
 ###############################################################################
 
+class AttrDict(dict):
+    def __init__(self, *a, **kw):
+        dict.__init__(self, *a, **kw)
+        self.__dict__ = self
+
+###############################################################################
+
 class MatchCriteria:
     def __init__(self, base_dir, dir_exclusions, file_wildcards, text_pattern):
         self._base_dir = base_dir
@@ -66,22 +73,31 @@ class MatchingThread(threading.Thread):
         when you call Thread.start().
         """
         self._running = True
+        self._search()
+        self._finished()
+
+    def _search(self):
         for dir_path, sub_dirs, filenames in os.walk(self._match_criteria._base_dir):
             #print "sub_dirs", sub_dirs
             sub_dirs[:] = self._match_criteria.filter_sub_dirs(sub_dirs)
-#             // filter filenames
             for filename in filenames:
                 if not self._running:
-                    self._finished()
                     return
                 if not self._match_criteria.is_matching_filename(filename):
                     continue
-#                 filepath = os.path.join(dir_path, filename)
-                match_result = MatchResult(dir_path, filename, 1, "result")
-                self._callback(self, match_result)
-#                 time.sleep(0.2)
-        self._finished()
-
+                if self._match_criteria._text_pattern is None:
+                    match_result = MatchResult(dir_path, filename, None, None)
+                    self._callback(self, match_result)
+                    continue
+                line_no = 0
+                for line in file(os.path.join(dir_path, filename)):
+                    if not self._running:
+                        return
+                    line_no += 1
+                    if self._match_criteria._text_pattern in line:
+                        match_result = MatchResult(dir_path, filename, line_no, line)
+                        self._callback(self, match_result)
+        
     def stop(self):
         print self, "stop"
         self._running = False
@@ -142,34 +158,25 @@ class Searcher:
         self._match_adapter = None
         self._match_data = {}
         
-        self.frame = dialog_xrc.LoadFrame(None, 'MainFrame')
-        assert self.frame, 'Failed to create frame'
-        self.frame.SetSize(size=(1400, 1000))
-#         self.frame.SetClientSize( self.frame.GetBestSize( ) )
-        self.frame.Bind(wx.EVT_CLOSE, self._on_close, id=self.frame.GetId())
+        root_node_name = 'main_frame'
+        main_frame = dialog_xrc.LoadFrame(None, root_node_name)
+        assert main_frame, 'Failed to create frame'
         
-        self._start_c = self._get_control('start')
-        self.frame.Bind(wx.EVT_BUTTON, self._start, id=self._start_c.GetId())
+        self._ui = AttrDict()
+        self._load_names(main_frame, dialog_xrc.GetResourceNode(root_node_name))
         
-        self._stop_c = self._get_control('stop')
-        self.frame.Bind(wx.EVT_BUTTON, self._stop, id=self._stop_c.GetId())
-        
-        self._gauge = self._get_control('gauge')
-        
-#         self.frame.Bind(CountEvent.event_binding, self._on_Count)
-        self.frame.Bind(MatchEvent.event_binding, self._on_Match)
-        
-#         self._matched_splitter = self._get_control('matched_spliter')
-#         self._matched_splitter.SetSashPosition(800)
-#         
-#         self._matched_files = self._get_control('matched_files')
-#         self._matched_files.InsertColumn(0, "Name", width=200)
-#         self._matched_files.InsertColumn(1, "Location", width=600)
-        self._tree_list_panel = self._get_control("tree_list_panel")
-#        self._tree_list_panel.SetSize(size=(400, 300))
-        tree_list_box = wx.BoxSizer(wx.VERTICAL)
+        self._ui.main_frame.SetSize(size=(1400, 1000))
 
-        self._tree_list = wx.gizmos.TreeListCtrl(self._tree_list_panel, -1, style =
+        self._ui.main_frame.Bind(wx.EVT_CLOSE, self._on_close, id=self._ui.main_frame_id)
+        
+        self._ui.main_frame.Bind(wx.EVT_BUTTON, self._start, id=self._ui.start_id)
+        
+        self._ui.main_frame.Bind(wx.EVT_BUTTON, self._stop, id=self._ui.stop_id)
+        
+        self._ui.main_frame.Bind(MatchEvent.event_binding, self._on_Match)
+        
+        tree_list_box = wx.BoxSizer(wx.VERTICAL)
+        self._ui.tree_list = wx.gizmos.TreeListCtrl(self._ui.tree_list_panel, -1, style =
                                         wx.TR_DEFAULT_STYLE
                                         #| wx.TR_HIDE_ROOT
                                         #| wx.TR_HAS_BUTTONS
@@ -177,94 +184,64 @@ class Searcher:
                                         #| wx.TR_ROW_LINES
                                         #| wx.TR_COLUMN_LINES
                                         #| wx.TR_NO_LINES 
+                                        #| wx.TR_HAS_VARIABLE_ROW_HEIGHT
                                         | wx.TR_FULL_ROW_HIGHLIGHT
                                    )
-        tree_list_box.Add(self._tree_list, 1, wx.EXPAND)
-        
-        self._tree_list_panel.SetSizer(tree_list_box)
-
-#         self._tree_list.SetSize(size=(300, 200))
+        tree_list_box.Add(self._ui.tree_list, 1, wx.EXPAND)
+        self._ui.tree_list_panel.SetSizer(tree_list_box)
 
         isz = (16,16)
         self._image_list = wx.ImageList(isz[0], isz[1])
         self._fldridx     = self._image_list.Add(wx.ArtProvider_GetBitmap(wx.ART_FOLDER,      wx.ART_OTHER, isz))
         self._fldropenidx = self._image_list.Add(wx.ArtProvider_GetBitmap(wx.ART_FILE_OPEN,   wx.ART_OTHER, isz))
         self._fileidx     = self._image_list.Add(wx.ArtProvider_GetBitmap(wx.ART_NORMAL_FILE, wx.ART_OTHER, isz))
-        self._tree_list.SetImageList(self._image_list)
+        self._ui.tree_list.SetImageList(self._image_list)
 
         # create some columns
-        self._tree_list.AddColumn("Path", flag=wx.COL_RESIZABLE)
-        self._tree_list.AddColumn("Text", flag=wx.COL_RESIZABLE)
-        self._tree_list.SetMainColumn(0) # the one with the tree in it...
-        self._tree_list.SetColumnWidth(0, 400)
+        self._ui.tree_list.AddColumn("Path", flag=wx.COL_RESIZABLE)
+        self._ui.tree_list.AddColumn("Text", flag=wx.COL_RESIZABLE)
+        self._ui.tree_list.SetMainColumn(0) # the one with the tree in it...
+        self._ui.tree_list.SetColumnWidth(0, 400)
         
-#         self._tree_root = None
-#         self._tree_root = self._tree_list.AddRoot("The Root Item")
-        
-#         self._font_name_c = self._get_control('FontName')
-#         self.frame.Bind(wx.EVT_LISTBOX, self._redraw_sample_text, id=self._font_name_c.GetId())
-#         
-#         self._font_size_c = self._get_control('FontSize')
-#         self.frame.Bind(wx.EVT_SPINCTRL, self._redraw_sample_text, id=self._font_size_c.GetId())
-#         
-#         self._font_weight_c = self._get_control('FontWeight')
-#         self.frame.Bind(wx.EVT_CHECKBOX, self._redraw_sample_text, id=self._font_weight_c.GetId())
-#         
-#         self._font_style_c = self._get_control('FontStyle')
-#         self.frame.Bind(wx.EVT_CHECKBOX, self._redraw_sample_text, id=self._font_style_c.GetId())
-#         
-#         self._font_refresh_c = self._get_control('FontRefresh')
-#         self.frame.Bind(wx.EVT_BUTTON, self._refresh_fonts, id=self._font_refresh_c.GetId())
-#         
-#         self._colour_picker_c = self._get_control('ColourPicker')
-#         self.frame.Bind(wx.EVT_COLOURPICKER_CHANGED, self._colour_picked, id=self._colour_picker_c.GetId())
-#         
-#         self._colour = self._colour_picker_c.GetColour()
-#         print "Initial colour:", self._colour
-#         
-#         self._colour_value_c = self._get_control('ColourValue')
-#         self.frame.Bind(wx.EVT_TEXT_ENTER, self._colour_value_changed, id=self._colour_value_c.GetId())
-#         
-#         self._sample_text_c = self._get_control('SampleText')
-
         ib = wx.IconBundle()
         ib.AddIconFromFile(icon_path, wx.BITMAP_TYPE_ANY)
-        self.frame.SetIcons(ib)
+        self._ui.main_frame.SetIcons(ib)
 
-    def _get_control(self, xml_id):
-        '''Retrieves the given control (within a dialog) by its xmlid'''
-        control = self.frame.FindWindowById(xrc.XRCID(xml_id))
-        assert control != None, 'Control not found: ' + xml_id
-        return control
-    
+    def _load_names(self, main_frame, xml_node):
+        name = xml_node.GetAttribute("name", "")
+        if name:
+            print "name:", name
+            xrc_id = xrc.XRCID(name)
+            control = main_frame.FindWindowById(xrc_id)
+            assert control != None, 'Control not found: ' + name
+            self._ui[name] = control
+            self._ui[name + "_id"] = xrc_id
+        child = xml_node.GetChildren()
+        while child: 
+            self._load_names(main_frame, child)
+            child = child.GetNext()
+            
     def populate(self):
-#         self._refresh_fonts(None)
-#         self._font_size_c.SetValue(FontBrowser.DEFAULT_FONT_SIZE)
-#         
-#         sample_text = string.join([chr(i + 32) for i in range(128 - 32)], '')
-#         self._sample_text_c.SetValue(sample_text)
-#         
-#         self._redraw_sample_text(None)
-        return
+        self._ui.main_frame.Show()
 
     def _on_close(self, event):
         print "_on_close", event
         self._stop(event)
-        self.frame.Destroy()
+        self._ui.main_frame.Destroy()
         
     def _start(self, event):
         print 'start'
         if self._match_adapter:
             self._match_adapter.stop()
         self._start_path = os.path.normpath("D:/development/python")
-        self._tree_list.DeleteAllItems()
-        self._tree_root = self._tree_list.AddRoot(self._start_path)
+        self._ui.tree_list.DeleteAllItems()
+        self._ui.tree_root = self._ui.tree_list.AddRoot(self._start_path)
         self._matched_dirs = {}
         self._matched_files = {}
-        match_criteria = MatchCriteria(self._start_path, [".git", ".svn"], ["*.py", "*.bat", "*.java"], "fred")
-        self._match_adapter = MatchAdapter(self.frame, match_criteria)
+        match_criteria = MatchCriteria(self._start_path, [".git", ".svn"], ["*.py", "*.bat", "*.java"], "import")
+        self._match_adapter = MatchAdapter(self._ui.main_frame, match_criteria)
         self._match_adapter.start()
-        self._gauge.Pulse()
+        self._ui.gauge.Pulse()
         
     def _stop(self, event):
         print 'stop'
@@ -285,7 +262,7 @@ class Searcher:
             
     def _finished(self):
         print '_finished'
-        self._gauge.SetValue(0)
+        self._ui.gauge.SetValue(0)
         
     def _handle_match(self, match_result):
         print '_handle_match'
@@ -295,26 +272,37 @@ class Searcher:
         match_file_key = (match_result.dir_path, match_result.filename)
         if match_file_key not in self._matched_files:
             self._matched_files[match_file_key] = self._add_file_node(dir_node, match_file_key)
+        file_node = self._matched_files[match_file_key]
+        if match_result.line_no:
+            self._add_line_node(file_node, match_result.line_no, match_result.line_text)
             
     def _add_dir_node(self, dir_path):
-        first_child = self._tree_list.GetFirstChild(self._tree_root)[0]
+        first_child = self._ui.tree_list.GetFirstChild(self._ui.tree_root)[0]
         rel_dir_path = os.path.relpath(dir_path, self._start_path)
-        dir_node = self._tree_list.AppendItem(self._tree_root, rel_dir_path)
-        self._tree_list.SetItemImage(dir_node, self._fldridx, which = wx.TreeItemIcon_Normal)
-        self._tree_list.SetItemImage(dir_node, self._fldropenidx, which = wx.TreeItemIcon_Expanded)
+        dir_node = self._ui.tree_list.AppendItem(self._ui.tree_root, rel_dir_path)
+        self._ui.tree_list.SetItemImage(dir_node, self._fldridx, which = wx.TreeItemIcon_Normal)
+        self._ui.tree_list.SetItemImage(dir_node, self._fldropenidx, which = wx.TreeItemIcon_Expanded)
         if not first_child.IsOk():
-            self._tree_list.Expand(self._tree_root)
+            self._ui.tree_list.Expand(self._ui.tree_root)
         return dir_node
 
     def _add_file_node(self, dir_node, (dir_path, filename)):
-        first_child = self._tree_list.GetFirstChild(dir_node)[0]
-        file_node = self._tree_list.AppendItem(dir_node, filename)
-        self._tree_list.SetItemImage(file_node, self._fileidx, which = wx.TreeItemIcon_Normal)
+        first_child = self._ui.tree_list.GetFirstChild(dir_node)[0]
+        file_node = self._ui.tree_list.AppendItem(dir_node, filename)
+        self._ui.tree_list.SetItemImage(file_node, self._fileidx, which = wx.TreeItemIcon_Normal)
         if not first_child.IsOk():
-            self._tree_list.Expand(dir_node)
+            self._ui.tree_list.Expand(dir_node)
         return file_node
             
-    
+    def _add_line_node(self, file_node, line_no, line_text):
+        first_child = self._ui.tree_list.GetFirstChild(file_node)[0]
+        line_node = self._ui.tree_list.AppendItem(file_node, str(line_no))
+#         self._ui.tree_list.SetItemImage(file_node, self._fileidx, which = wx.TreeItemIcon_Normal)
+        self._ui.tree_list.SetItemText(line_node, line_text, 1)
+        if not first_child.IsOk():
+            self._ui.tree_list.Expand(file_node)
+        return line_node
+            
 ###############################################################################
 
 def runAppXRC(resource_dir, resource_name):
@@ -323,7 +311,6 @@ def runAppXRC(resource_dir, resource_name):
     app = wx.App(False)
     browser = Searcher(resource_path, icon_path)
     browser.populate()
-    browser.frame.Show()
     app.MainLoop()
     return
 

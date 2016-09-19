@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <resource class="wxSplitterWindow">
-  <object class="wxFrame" name="MainFrame">
+  <object class="wxFrame" name="main_frame">
     <object class="wxBoxSizer">
       <object class="sizeritem">
         <object class="wxBoxSizer">
@@ -148,7 +148,6 @@
       <object class="spacer">
         <size>4</size>
       </object>
-      
       <object class="sizeritem">
         <object class="wxStaticBoxSizer">
           <label>Matches</label>
