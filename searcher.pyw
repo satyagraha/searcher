@@ -6,6 +6,7 @@
 
 import fnmatch
 import os.path
+import re
 import string
 import sys
 import threading
@@ -30,12 +31,30 @@ class AttrDict(dict):
 ###############################################################################
 
 class MatchCriteria:
-    def __init__(self, base_dir, dir_exclusions, file_wildcards, text_pattern):
+    def __init__(self, base_dir, dir_exclusions, file_wildcards, text_pattern, is_case_sensitive, is_regex):
         self._base_dir = base_dir
         self._dir_exclusions = dir_exclusions
         self._file_wildcards = file_wildcards
-        self._text_pattern = text_pattern
+        self.text_pattern = text_pattern
+        # set up self.matches(line) which returns col_no on match, otherwise -1
+        if is_regex:
+            flags = 0 if is_case_sensitive else re.IGNORECASE
+            self._text_pattern_regex = re.compile(text_pattern, flags)
+            self.matches = self._match_regex
+        else:
+            self._text_pattern_literal = text_pattern if is_case_sensitive else text_pattern.upper() 
+            self.matches = self._match_senstitive if is_case_sensitive else self._match_insensitive
 
+    def _match_regex(self, line):
+        match = self._text_pattern_regex.search(line)
+        return match.start() if match else -1
+    
+    def _match_senstitive(self, line):
+        return line.find(self._text_pattern_literal)
+    
+    def _match_insensitive(self, line):
+        return line.upper().find(self._text_pattern_literal)
+    
     def is_matching_filename(self, filename):
         return self._matches_wildcards(filename, self._file_wildcards)
 
@@ -48,15 +67,16 @@ class MatchCriteria:
         return any((fnmatch.fnmatch(name, wildcard) for wildcard in wildcards))
 
 class MatchResult:
-    def __init__(self, dir_path, filename, line_no, line_text):
+    def __init__(self, dir_path, filename, line_no, col_no, line):
         self.dir_path = dir_path
         self.filename = filename
         self.line_no = line_no
-        self.line_text = line_text
+        self.col_no = col_no
+        self.line = line
                 
 class MatchingThread(threading.Thread):
     
-    finished = MatchResult(None, None, None, None)
+    finished = MatchResult(None, None, None, None, None)
     
     def __init__(self, match_criteria, callback):
         """
@@ -85,7 +105,7 @@ class MatchingThread(threading.Thread):
                     return
                 if not self._match_criteria.is_matching_filename(filename):
                     continue
-                if self._match_criteria._text_pattern is None:
+                if self._match_criteria.text_pattern is None:
                     match_result = MatchResult(dir_path, filename, None, None)
                     self._callback(self, match_result)
                     continue
@@ -94,8 +114,9 @@ class MatchingThread(threading.Thread):
                     if not self._running:
                         return
                     line_no += 1
-                    if self._match_criteria._text_pattern in line:
-                        match_result = MatchResult(dir_path, filename, line_no, line)
+                    col_no = self._match_criteria.matches(line)
+                    if col_no != -1:
+                        match_result = MatchResult(dir_path, filename, line_no, col_no, line)
                         self._callback(self, match_result)
         
     def stop(self):
@@ -202,6 +223,9 @@ class Searcher:
         self._ui.tree_list.AddColumn("Text", flag=wx.COL_RESIZABLE)
         self._ui.tree_list.SetMainColumn(0) # the one with the tree in it...
         self._ui.tree_list.SetColumnWidth(0, 400)
+
+        # event handler        
+        self._ui.tree_list.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_tree_item_activated)
         
         ib = wx.IconBundle()
         ib.AddIconFromFile(icon_path, wx.BITMAP_TYPE_ANY)
@@ -238,7 +262,7 @@ class Searcher:
         self._ui.tree_root = self._ui.tree_list.AddRoot(self._start_path)
         self._matched_dirs = {}
         self._matched_files = {}
-        match_criteria = MatchCriteria(self._start_path, [".git", ".svn"], ["*.py", "*.bat", "*.java"], "import")
+        match_criteria = MatchCriteria(self._start_path, [".git", ".svn"], ["*.py", "*.bat", "*.java"], "Import", True, True)
         self._match_adapter = MatchAdapter(self._ui.main_frame, match_criteria)
         self._match_adapter.start()
         self._ui.gauge.Pulse()
@@ -274,7 +298,7 @@ class Searcher:
             self._matched_files[match_file_key] = self._add_file_node(dir_node, match_file_key)
         file_node = self._matched_files[match_file_key]
         if match_result.line_no:
-            self._add_line_node(file_node, match_result.line_no, match_result.line_text)
+            self._add_line_node(file_node, match_result.line_no, match_result.col_no, match_result.line)
             
     def _add_dir_node(self, dir_path):
         first_child = self._ui.tree_list.GetFirstChild(self._ui.tree_root)[0]
@@ -294,15 +318,19 @@ class Searcher:
             self._ui.tree_list.Expand(dir_node)
         return file_node
             
-    def _add_line_node(self, file_node, line_no, line_text):
+    def _add_line_node(self, file_node, line_no, col_no, line):
         first_child = self._ui.tree_list.GetFirstChild(file_node)[0]
-        line_node = self._ui.tree_list.AppendItem(file_node, str(line_no))
+        line_node = self._ui.tree_list.AppendItem(file_node, str(line_no) + ", " + str(col_no))
 #         self._ui.tree_list.SetItemImage(file_node, self._fileidx, which = wx.TreeItemIcon_Normal)
-        self._ui.tree_list.SetItemText(line_node, line_text, 1)
+        self._ui.tree_list.SetItemText(line_node, line, 1)
         if not first_child.IsOk():
             self._ui.tree_list.Expand(file_node)
         return line_node
             
+    def _on_tree_item_activated(self, event):
+        item = event.GetItem()
+        print "_on_tree_item_activated", item
+        
 ###############################################################################
 
 def runAppXRC(resource_dir, resource_name):
