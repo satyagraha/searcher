@@ -262,7 +262,7 @@ class Searcher:
         self._ui.tree_root = self._ui.tree_list.AddRoot(self._start_path)
         self._matched_dirs = {}
         self._matched_files = {}
-        match_criteria = MatchCriteria(self._start_path, [".git", ".svn"], ["*.py", "*.bat", "*.java"], "Import", True, True)
+        match_criteria = MatchCriteria(self._start_path, [".git", ".svn"], ["*.py", "*.bat", "*.java"], "Im.*rt", False, True)
         self._match_adapter = MatchAdapter(self._ui.main_frame, match_criteria)
         self._match_adapter.start()
         self._ui.gauge.Pulse()
@@ -306,6 +306,7 @@ class Searcher:
         dir_node = self._ui.tree_list.AppendItem(self._ui.tree_root, rel_dir_path)
         self._ui.tree_list.SetItemImage(dir_node, self._fldridx, which = wx.TreeItemIcon_Normal)
         self._ui.tree_list.SetItemImage(dir_node, self._fldropenidx, which = wx.TreeItemIcon_Expanded)
+        self._ui.tree_list.SetItemData(dir_node, wx.TreeItemData((dir_path,)))
         if not first_child.IsOk():
             self._ui.tree_list.Expand(self._ui.tree_root)
         return dir_node
@@ -314,6 +315,7 @@ class Searcher:
         first_child = self._ui.tree_list.GetFirstChild(dir_node)[0]
         file_node = self._ui.tree_list.AppendItem(dir_node, filename)
         self._ui.tree_list.SetItemImage(file_node, self._fileidx, which = wx.TreeItemIcon_Normal)
+        self._ui.tree_list.SetItemData(file_node, wx.TreeItemData((dir_path, filename)))
         if not first_child.IsOk():
             self._ui.tree_list.Expand(dir_node)
         return file_node
@@ -323,13 +325,35 @@ class Searcher:
         line_node = self._ui.tree_list.AppendItem(file_node, str(line_no) + ", " + str(col_no))
 #         self._ui.tree_list.SetItemImage(file_node, self._fileidx, which = wx.TreeItemIcon_Normal)
         self._ui.tree_list.SetItemText(line_node, line, 1)
+        (dir_path, filename) = self._ui.tree_list.GetItemData(file_node).GetData()
+        self._ui.tree_list.SetItemData(line_node, wx.TreeItemData((dir_path, filename, line_no, col_no)))
         if not first_child.IsOk():
             self._ui.tree_list.Expand(file_node)
         return line_node
             
     def _on_tree_item_activated(self, event):
         item = event.GetItem()
-        print "_on_tree_item_activated", item
+        data = self._ui.tree_list.GetItemData(item)
+        info = data.GetData() if data else None
+        print "_on_tree_item_activated", item, data, info
+        if info:
+            if len(info) == 1:
+                self._on_activate_dir_path(*info)
+            elif len(info) == 2:
+                self._on_activate_filename(*info)
+            elif len(info) == 4:
+                self._on_activate_line(*info)
+            else:
+                print "unexpected:", info
+                
+    def _on_activate_dir_path(self, dir_path):
+        print "info", dir_path
+    
+    def _on_activate_filename(self, dir_path, filename):
+        print "info", dir_path, filename
+    
+    def _on_activate_line(self, dir_path, filename, line_no, col_no):
+        print "info", dir_path, filename, line_no, col_no
         
 ###############################################################################
 
