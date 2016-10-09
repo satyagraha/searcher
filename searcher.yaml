@@ -1,7 +1,20 @@
 ###############################################################################
+# Generic os-independent configuration
+
+settings:
+  frame_size: [1400, 1000]
+  tree_col_size: 400
+  text_col_size: 2000
+  include_files: "*.*"
+  exclude_dirs: ".git, .svn"
+  match_case: false
+  regex: false
+  recurse: true
+
+###############################################################################
 # Configuration for Windows
 
-win32:
+os.win32:
   common:
     cmd: C:\Windows\System32\cmd.exe
     explorer: C:\Windows\explorer.exe
@@ -30,16 +43,18 @@ win32:
 ###############################################################################
 # Configuration for Linux
     
-linux32:
+os.linux32:
 # additions welcome
   common:
   activate:
+  context:
 
 ###############################################################################
 # Configuration for Mac
 
-darwin:
+os.darwin:
 # additions welcome 
   common:
   activate:
+  context:
  

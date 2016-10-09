@@ -2,6 +2,8 @@
 This project provides a simple portable GUI-based file search utility. Written in Python 
 and using the wxPython GUI toolkit, it runs on most modern operating systems.
 
+![capture](screenshot.png)
+
 ## Requirements
 The application requires the following software components, and is known to work with the shown versions but may run with earlier ones:
 - [Python](http://www.python.org) - 2.7.12
@@ -26,6 +28,14 @@ then press _Enter_ for the selected action.
 ## Configuration
 The application is configured via the file `searcher.yaml` which is a simple [YAML](https://en.wikipedia.org/wiki/YAML) file.
 It is organized into sections by operating system, and entries can be customized for user preferences as described therein.
+
+## To Do
+- Accept command-line argument for initial path
+- Keyboard accellerators 
+- Better icon
+- Context menu copy path action
+- Main menu
+- Status bar
 
 ## History
 1.0.0 Initial version

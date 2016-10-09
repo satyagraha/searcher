@@ -1,108 +1,131 @@
 <?xml version="1.0" ?>
-<resource class="wxSplitterWindow">
+<resource class="spacer">
   <object class="wxFrame" name="main_frame">
     <object class="wxBoxSizer">
       <object class="sizeritem">
         <object class="wxBoxSizer">
-          <object class="spacer"/>
+          
           <object class="sizeritem">
             <object class="wxStaticBoxSizer">
               <object class="sizeritem">
                 <object class="wxBoxSizer">
                   <object class="sizeritem">
                     <object class="wxStaticText">
-                      <label>Include:</label>
+                      <label>Include Files:</label>
                     </object>
+                    <flag>wxLEFT</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
+                  
                   <object class="sizeritem">
-                    <object class="wxTextCtrl" name="include"/>
+                    <object class="wxTextCtrl" name="include_files"/>
+                    <option>1</option>
+                    <flag>wxLEFT|wxEXPAND</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
+                  
                   <object class="sizeritem">
                     <object class="wxStaticText">
-                      <label>Exclude:</label>
+                      <label>Exclude Dirs:</label>
                     </object>
+                    <flag>wxLEFT</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
+                  
                   <object class="sizeritem">
-                    <object class="wxTextCtrl" name="exclude"/>
+                    <object class="wxTextCtrl" name="exclude_dirs"/>
+                    <option>1</option>
+                    <flag>wxLEFT|wxRIGHT|wxEXPAND</flag>
+                    <border>4</border>
                   </object>
                   <orient>wxHORIZONTAL</orient>
                 </object>
                 <flag>wxEXPAND</flag>
               </object>
-              <object class="spacer">
-                <size>4</size>
-              </object>
+              
               <object class="sizeritem">
                 <object class="wxBoxSizer">
                   <object class="sizeritem">
                     <object class="wxStaticText">
                       <label>Text:</label>
                     </object>
+                    <flag>wxLEFT</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
                   <object class="sizeritem">
                     <object class="wxTextCtrl" name="text"/>
+                    <option>1</option>
+                    <flag>wxLEFT|wxEXPAND</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
                   <object class="sizeritem">
                     <object class="wxStaticText">
                       <label>Match case:</label>
                     </object>
+                    <flag>wxLEFT</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
                   <object class="sizeritem">
                     <object class="wxCheckBox" name="match_case"/>
+                    <flag>wxLEFT</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
                   <object class="sizeritem">
                     <object class="wxStaticText">
                       <label>Regex:</label>
                     </object>
+                    <flag>wxLEFT</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
                   <object class="sizeritem">
                     <object class="wxCheckBox" name="regex"/>
+                    <flag>wxLEFT|wxRIGHT</flag>
+                    <border>4</border>
                   </object>
                   <orient>wxHORIZONTAL</orient>
                 </object>
-                <flag>wxEXPAND</flag>
+                <flag>wxTOP|wxEXPAND</flag>
+                <border>4</border>
               </object>
-              <object class="spacer"/>
+              
               <object class="sizeritem">
                 <object class="wxBoxSizer">
                   <object class="sizeritem">
                     <object class="wxStaticText">
-                      <label>Folder</label>
+                      <label>Dir:</label>
                     </object>
+                    <flag>wxLEFT</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
-                  <object class="sizeritem">
-                    <object class="wxTextCtrl" name="directory"/>
-                  </object>
-                  <object class="spacer"/>
                   <object class="sizeritem">
                     <object class="wxButton" name="browse">
                       <label>Browse</label>
                     </object>
+                    <flag>wxLEFT</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
+                  <object class="sizeritem">
+                    <object class="wxTextCtrl" name="directory"/>
+                    <option>1</option>
+                    <flag>wxLEFT|wxEXPAND</flag>
+                    <border>4</border>
+                  </object>
                   <object class="sizeritem">
                     <object class="wxStaticText">
                       <label>Recurse:</label>
                     </object>
+                    <flag>wxLEFT</flag>
+                    <border>4</border>
                   </object>
-                  <object class="spacer"/>
                   <object class="sizeritem">
-                    <object class="wxCheckBox" name="recurse">
-                      <checked>1</checked>
-                    </object>
+                    <object class="wxCheckBox" name="recurse"/>
+                    <flag>wxLEFT|wxRIGHT</flag>
+                    <border>4</border>
                   </object>
                   <orient>wxHORIZONTAL</orient>
                 </object>
-                <flag>wxEXPAND</flag>
+                <flag>wxTOP|wxBOTTOM|wxEXPAND</flag>
+                <border>4</border>
               </object>
               <label>Options</label>
               <orient>wxVERTICAL</orient>
@@ -110,9 +133,7 @@
             <option>1</option>
             <flag>wxEXPAND|wxALIGN_LEFT</flag>
           </object>
-          <object class="spacer">
-            <size>4</size>
-          </object>
+          
           <object class="sizeritem">
             <object class="wxStaticBoxSizer">
               <object class="sizeritem">
@@ -120,24 +141,26 @@
                   <label>Start</label>
                   <default>1</default>
                 </object>
-                <flag>wxEXPAND</flag>
+                <flag>wxLEFT|wxRIGHT|wxEXPAND</flag>
+                <border>4</border>
               </object>
-              <object class="spacer"/>
               <object class="sizeritem">
                 <object class="wxButton" name="stop">
                   <label>Stop</label>
                 </object>
-                <flag>wxEXPAND</flag>
+                <flag>wxLEFT|wxRIGHT|wxEXPAND</flag>
+                <border>4</border>
               </object>
-              <label>Control</label>
-              <orient>wxVERTICAL</orient>
               <object class="sizeritem">
                 <object class="wxGauge" name="gauge"/>
                 <flag>wxTOP</flag>
                 <border>10</border>
               </object>
+              <label>Control</label>
+              <orient>wxVERTICAL</orient>
             </object>
-            <flag>wxEXPAND|wxALIGN_RIGHT</flag>
+            <flag>wxLEFT|wxEXPAND|wxALIGN_RIGHT</flag>
+            <border>4</border>
           </object>
           <orient>wxHORIZONTAL</orient>
         </object>
@@ -145,13 +168,9 @@
         <flag>wxEXPAND</flag>
       </object>
       <orient>wxVERTICAL</orient>
-      <object class="spacer">
-        <size>4</size>
-      </object>
+      
       <object class="sizeritem">
         <object class="wxStaticBoxSizer">
-          <label>Matches</label>
-          <orient>wxVERTICAL</orient>
           <object class="sizeritem">
             <object class="wxPanel" name="tree_list_panel">
               <size>1000, 300</size>
@@ -159,9 +178,12 @@
             <option>1</option>
             <flag>wxEXPAND</flag>
           </object>
+          <label>Matches</label>
+          <orient>wxVERTICAL</orient>
         </object>
         <option>1</option>
-        <flag>wxEXPAND</flag>
+        <flag>wxTOP|wxEXPAND</flag>
+        <border>4</border>
       </object>
     </object>
     <size>1000,500</size>
