@@ -9,8 +9,10 @@ import os.path
 import re
 import string
 import sys
+import subprocess
 import threading
 import time
+import yaml
 
 import  wx
 import  wx.gizmos
@@ -66,13 +68,21 @@ class MatchCriteria:
 #         print "xxx", name, wildcards
         return any((fnmatch.fnmatch(name, wildcard) for wildcard in wildcards))
 
-class MatchResult:
+class MatchResult(AttrDict):
     def __init__(self, dir_path, filename, line_no, col_no, line):
+        AttrDict.__init__(self)
         self.dir_path = dir_path
         self.filename = filename
+        self.file_path = os.path.join(dir_path, filename) if filename else None
         self.line_no = line_no
         self.col_no = col_no
         self.line = line
+        
+    def as_dir_path(self):
+        return MatchResult(self.dir_path, None, None, None, None)
+        
+    def as_file_path(self):
+        return MatchResult(self.dir_path, self.filename, None, None, None)
                 
 class MatchingThread(threading.Thread):
     
@@ -172,7 +182,20 @@ class MatchAdapter:
 
 class Searcher:
     
-    def __init__(self, resource_path, icon_path):
+    def __init__(self, resource_dir, resource_name):
+
+        yaml_path = os.path.join(resource_dir, resource_name + '.yaml')
+        resource_path = os.path.join(resource_dir, resource_name + '.xrc') 
+        icon_path = os.path.join(resource_dir, resource_name + '.ico')
+      
+        with open(yaml_path) as yaml_stream:
+            all_config = yaml.load(yaml_stream)
+            platform_config = AttrDict(all_config[sys.platform])
+            print "platform_config", platform_config
+            self._common_config = AttrDict(platform_config.common)
+            self._activate_config = AttrDict(platform_config.activate)
+            self._context_config = AttrDict(platform_config.context)
+      
         dialog_xrc = xrc.XmlResource(resource_path)
         assert dialog_xrc, 'Failed to create XmlResource: ' + resource_path
         
@@ -226,6 +249,7 @@ class Searcher:
 
         # event handler        
         self._ui.tree_list.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_tree_item_activated)
+        self._ui.tree_list.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self._on_tree_item_context_menu)
         
         ib = wx.IconBundle()
         ib.AddIconFromFile(icon_path, wx.BITMAP_TYPE_ANY)
@@ -291,42 +315,41 @@ class Searcher:
     def _handle_match(self, match_result):
         print '_handle_match'
         if match_result.dir_path not in self._matched_dirs:
-            self._matched_dirs[match_result.dir_path] = self._add_dir_node(match_result.dir_path)
+            self._matched_dirs[match_result.dir_path] = self._add_dir_node(match_result)
         dir_node = self._matched_dirs[match_result.dir_path]
         match_file_key = (match_result.dir_path, match_result.filename)
         if match_file_key not in self._matched_files:
-            self._matched_files[match_file_key] = self._add_file_node(dir_node, match_file_key)
+            self._matched_files[match_file_key] = self._add_file_node(dir_node, match_result)
         file_node = self._matched_files[match_file_key]
         if match_result.line_no:
-            self._add_line_node(file_node, match_result.line_no, match_result.col_no, match_result.line)
+            self._add_line_node(file_node, match_result)
             
-    def _add_dir_node(self, dir_path):
+    def _add_dir_node(self, match_result):
         first_child = self._ui.tree_list.GetFirstChild(self._ui.tree_root)[0]
-        rel_dir_path = os.path.relpath(dir_path, self._start_path)
+        rel_dir_path = os.path.relpath(match_result.dir_path, self._start_path)
         dir_node = self._ui.tree_list.AppendItem(self._ui.tree_root, rel_dir_path)
         self._ui.tree_list.SetItemImage(dir_node, self._fldridx, which = wx.TreeItemIcon_Normal)
         self._ui.tree_list.SetItemImage(dir_node, self._fldropenidx, which = wx.TreeItemIcon_Expanded)
-        self._ui.tree_list.SetItemData(dir_node, wx.TreeItemData((dir_path,)))
+        self._ui.tree_list.SetItemData(dir_node, wx.TreeItemData(match_result.as_dir_path()))
         if not first_child.IsOk():
             self._ui.tree_list.Expand(self._ui.tree_root)
         return dir_node
 
-    def _add_file_node(self, dir_node, (dir_path, filename)):
+    def _add_file_node(self, dir_node, match_result):
         first_child = self._ui.tree_list.GetFirstChild(dir_node)[0]
-        file_node = self._ui.tree_list.AppendItem(dir_node, filename)
+        file_node = self._ui.tree_list.AppendItem(dir_node, match_result.filename)
         self._ui.tree_list.SetItemImage(file_node, self._fileidx, which = wx.TreeItemIcon_Normal)
-        self._ui.tree_list.SetItemData(file_node, wx.TreeItemData((dir_path, filename)))
+        self._ui.tree_list.SetItemData(file_node, wx.TreeItemData(match_result.as_file_path()))
         if not first_child.IsOk():
             self._ui.tree_list.Expand(dir_node)
         return file_node
             
-    def _add_line_node(self, file_node, line_no, col_no, line):
+    def _add_line_node(self, file_node, match_result):
         first_child = self._ui.tree_list.GetFirstChild(file_node)[0]
-        line_node = self._ui.tree_list.AppendItem(file_node, str(line_no) + ", " + str(col_no))
+        line_node = self._ui.tree_list.AppendItem(file_node, str(match_result.line_no) + ", " + str(match_result.col_no))
 #         self._ui.tree_list.SetItemImage(file_node, self._fileidx, which = wx.TreeItemIcon_Normal)
-        self._ui.tree_list.SetItemText(line_node, line, 1)
-        (dir_path, filename) = self._ui.tree_list.GetItemData(file_node).GetData()
-        self._ui.tree_list.SetItemData(line_node, wx.TreeItemData((dir_path, filename, line_no, col_no)))
+        self._ui.tree_list.SetItemText(line_node, match_result.line, 1)
+        self._ui.tree_list.SetItemData(line_node, wx.TreeItemData(match_result))
         if not first_child.IsOk():
             self._ui.tree_list.Expand(file_node)
         return line_node
@@ -334,43 +357,57 @@ class Searcher:
     def _on_tree_item_activated(self, event):
         item = event.GetItem()
         data = self._ui.tree_list.GetItemData(item)
-        info = data.GetData() if data else None
-        print "_on_tree_item_activated", item, data, info
-        if info:
-            if len(info) == 1:
-                self._on_activate_dir_path(*info)
-            elif len(info) == 2:
-                self._on_activate_filename(*info)
-            elif len(info) == 4:
-                self._on_activate_line(*info)
-            else:
-                print "unexpected:", info
+        match_result = data.GetData() if data else None
+        print "_on_tree_item_activated", item, data, match_result
+        if not match_result:
+            return
+        template = self._best_config_entry(self._activate_config, match_result)
+        self._launch_process(match_result, template)
                 
-    def _on_activate_dir_path(self, dir_path):
-        print "info", dir_path
-    
-    def _on_activate_filename(self, dir_path, filename):
-        print "info", dir_path, filename
-    
-    def _on_activate_line(self, dir_path, filename, line_no, col_no):
-        print "info", dir_path, filename, line_no, col_no
+    def _on_tree_item_context_menu(self, event):
+        item = event.GetItem()
+        data = self._ui.tree_list.GetItemData(item)
+        match_result = data.GetData() if data else None
+        print "_on_tree_item_context_menu", item, data, match_result
+        if not match_result:
+            return
+        self._ui.popup_menu = wx.Menu()
+        menu_defs = self._best_config_entry(self._context_config, match_result)
+        for menu_def in menu_defs:
+            menu_text, template = menu_def[0], menu_def[1:]
+            menu_entry = self._ui.popup_menu.Append(-1, menu_text)
+            menu_handler = lambda menu_event, template = template: self._launch_process(match_result, template)
+            self._ui.main_frame.Bind(wx.EVT_MENU, menu_handler, menu_entry)
+        self._ui.main_frame.PopupMenu(self._ui.popup_menu, event.GetPoint())
+        self._ui.popup_menu.Destroy()
+                        
+    def _best_config_entry(self, config, match_result):
+        if match_result.line_no:
+            return config.on_line
+        elif match_result.file_path:
+            return config.on_file_path
+        elif match_result.dir_path:
+            return config.on_dir_path
+        else:
+            raise Exception("unexpected: " + str(match_result))
+
+    def _launch_process(self, match_result, template):
+        print "template", template
+        substitutions = self._common_config.copy()
+        substitutions.update(match_result)
+        print "substitutions", substitutions
+        substituted = [entry.format(**substitutions) for entry in template] 
+        print "substituted", substituted
+        subprocess.Popen(substituted, close_fds=True, shell=True)
         
-###############################################################################
-
-def runAppXRC(resource_dir, resource_name):
-    resource_path = os.path.join(resource_dir, resource_name + '.xrc') 
-    icon_path = os.path.join(resource_dir, resource_name + '.ico')
-    app = wx.App(False)
-    browser = Searcher(resource_path, icon_path)
-    browser.populate()
-    app.MainLoop()
-    return
-
 ###############################################################################
 
 if __name__ == '__main__':
     resource_dir = sys.path[0]
     resource_name = 'searcher'
-    runAppXRC(resource_dir, resource_name)
+    app = wx.App(False)
+    browser = Searcher(resource_dir, resource_name)
+    browser.populate()
+    app.MainLoop()
 
 ###############################################################################
