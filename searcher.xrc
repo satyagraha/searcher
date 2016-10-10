@@ -1,10 +1,23 @@
 <?xml version="1.0" ?>
 <resource class="spacer">
   <object class="wxFrame" name="main_frame">
+    <object class="wxMenuBar" name="_menu_bar">
+      <object class="wxMenu">
+        <label>File</label>
+        <object class="wxMenuItem" name="_exit">
+          <label>Exit</label>
+        </object>
+      </object>
+      <object class="wxMenu">
+        <label>Help</label>
+        <object class="wxMenuItem" name="_about">
+          <label>About...</label>
+        </object>
+      </object>
+    </object>
     <object class="wxBoxSizer">
       <object class="sizeritem">
         <object class="wxBoxSizer">
-          
           <object class="sizeritem">
             <object class="wxStaticBoxSizer">
               <object class="sizeritem">
@@ -16,14 +29,12 @@
                     <flag>wxLEFT</flag>
                     <border>4</border>
                   </object>
-                  
                   <object class="sizeritem">
                     <object class="wxTextCtrl" name="include_files"/>
                     <option>1</option>
                     <flag>wxLEFT|wxEXPAND</flag>
                     <border>4</border>
                   </object>
-                  
                   <object class="sizeritem">
                     <object class="wxStaticText">
                       <label>Exclude Dirs:</label>
@@ -31,7 +42,6 @@
                     <flag>wxLEFT</flag>
                     <border>4</border>
                   </object>
-                  
                   <object class="sizeritem">
                     <object class="wxTextCtrl" name="exclude_dirs"/>
                     <option>1</option>
@@ -42,7 +52,6 @@
                 </object>
                 <flag>wxEXPAND</flag>
               </object>
-              
               <object class="sizeritem">
                 <object class="wxBoxSizer">
                   <object class="sizeritem">
@@ -87,7 +96,6 @@
                 <flag>wxTOP|wxEXPAND</flag>
                 <border>4</border>
               </object>
-              
               <object class="sizeritem">
                 <object class="wxBoxSizer">
                   <object class="sizeritem">
@@ -133,7 +141,6 @@
             <option>1</option>
             <flag>wxEXPAND|wxALIGN_LEFT</flag>
           </object>
-          
           <object class="sizeritem">
             <object class="wxStaticBoxSizer">
               <object class="sizeritem">
@@ -168,7 +175,6 @@
         <flag>wxEXPAND</flag>
       </object>
       <orient>wxVERTICAL</orient>
-      
       <object class="sizeritem">
         <object class="wxStaticBoxSizer">
           <object class="sizeritem">
@@ -188,5 +194,6 @@
     </object>
     <size>1000,500</size>
     <title>File Searcher</title>
+    <object class="wxStatusBar" name="status_bar"/>
   </object>
 </resource>

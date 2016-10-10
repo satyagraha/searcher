@@ -10,6 +10,7 @@ settings:
   match_case: false
   regex: false
   recurse: true
+  version: 1.0.0
 
 ###############################################################################
 # Configuration for Windows
@@ -22,6 +23,9 @@ os.win32:
     notepad_pp: C:\Program Files (x86)\Notepad++\notepad++.exe
     emacs_bin: D:\software\emacs-24.2\bin
     
+# In the following sections, the string values which may be interpolated are
+# those defined in the common section above plus the attributes of the MatchResult class
+
   activate:
     on_dir_path: ["{explorer}", "{dir_path}"]
 #    on_file_path: ["{notepad}", "{file_path}"]

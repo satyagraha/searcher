@@ -31,10 +31,10 @@ It is organized into sections by operating system, and entries can be customized
 
 ## To Do
 - Accept command-line argument for initial path
+- Match for filename only
 - Keyboard accellerators 
 - Better icon
 - Context menu copy path action
-- Main menu
 - Status bar
 
 ## History
