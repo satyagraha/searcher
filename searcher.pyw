@@ -432,7 +432,7 @@ class Searcher:
         for menu_def in menu_defs:
             menu_text, template = menu_def[0], menu_def[1:]
             menu_entry = self._ui.popup_menu.Append(-1, menu_text)
-            menu_handler = lambda menu_event, template = template: self._launch_process(match_result, template)
+            menu_handler = lambda menu_event, template = template: self._handle_context(match_result, template)
             self._ui.main_frame.Bind(wx.EVT_MENU, menu_handler, menu_entry)
         self._ui.main_frame.PopupMenu(self._ui.popup_menu, event.GetPoint())
         self._ui.popup_menu.Destroy()
@@ -447,6 +447,21 @@ class Searcher:
         else:
             raise Exception("unexpected: " + str(match_result))
 
+    def _handle_context(self, match_result, template):
+        if template == ["copy_dir_path"]:
+            self._copy_path(match_result.dir_path)
+        elif template == ["copy_file_path"]:
+            self._copy_path(match_result.file_path)
+        else:
+            self._launch_process(match_result, template)
+            
+    def _copy_path(self, path):
+        clip_data = wx.TextDataObject()
+        clip_data.SetText(path)
+        wx.TheClipboard.Open()
+        wx.TheClipboard.SetData(clip_data)
+        wx.TheClipboard.Close()
+        
     def _launch_process(self, match_result, template):
         print "template", template
         substitutions = self._common_config.copy()

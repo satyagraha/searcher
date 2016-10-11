@@ -20,22 +20,26 @@ press the _Start_ button to commence searching.
 Assuming matches are found, they appear in a tree view with three types of entry. Directories are the first type, and have children which are files,
 and the files have children which are line matches.
 
-In the results tree, you can select a row and then press _Enter_ to perform the default action for that type of entry.
+In the results tree, you can select a row and then press _Enter_ to perform the default action for that type of entry,
+typically opening the file in your preferred editor.
 
-Similarly, in the tree you can click the right-hand mouse button to activate the context (pop-up) menu for that type of entry;
+Similarly, on a results tree row you can click the right-hand mouse button to activate the context (pop-up) menu for that type of entry;
 then press _Enter_ for the selected action.  
 
 ## Configuration
 The application is configured via the file `searcher.yaml` which is a simple [YAML](https://en.wikipedia.org/wiki/YAML) file.
 It is organized into sections by operating system, and entries can be customized for user preferences as described therein.
 
+## Development
+Note the UI is defined in `searcher.xrc` which is edited with the visual UI tool [XRCEd](https://wiki.wxpython.org/XRCed)
+which is part of the standard wx distribution in package `wx.tools.XRCed.xrced`.
+
 ## To Do
 - Accept command-line argument for initial path
 - Match for filename only
 - Keyboard accellerators 
 - Better icon
-- Context menu copy path action
-- Status bar
+- Status bar content
 
 ## History
 1.0.0 Initial version
