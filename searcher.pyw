@@ -289,14 +289,16 @@ class Searcher:
     def populate(self):
         self._ui.main_frame.Show()
         self._ui.menu_bar = self._ui.main_frame.GetMenuBar()
-        print "menus", self._ui.menu_bar.GetMenus() 
+#         print "menus", self._ui.menu_bar.GetMenus() 
         for (menu, title) in self._ui.menu_bar.GetMenus():
             for menu_item in menu.GetMenuItems():
-                print "menu_item", menu_item.GetItemLabelText()
+#                 print "menu_item", menu_item.GetItemLabelText()
                 menu_key = "menu_" + menu_item.GetItemLabelText().strip(".").lower()
                 self._ui[menu_key] = menu_item
         self._ui.main_frame.Bind(wx.EVT_MENU, self._on_close, self._ui.menu_exit) 
-        self._ui.main_frame.Bind(wx.EVT_MENU, self._on_about, self._ui.menu_about) 
+        self._ui.main_frame.Bind(wx.EVT_MENU, self._on_about, self._ui.menu_about)
+        if len(sys.argv) > 1:
+            self._ui.directory.SetValue(sys.argv[1]) 
 
     def _on_close(self, event):
         print "_on_close", event
