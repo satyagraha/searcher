@@ -2,17 +2,17 @@
 <resource class="spacer">
   <object class="wxFrame" name="main_frame">
     <object class="wxMenuBar" name="_menu_bar">
-      <object class="wxMenu">
-        <label>File</label>
+      <object class="wxMenu" name="_file">
         <object class="wxMenuItem" name="_exit">
-          <label>Exit</label>
+          <label>E&amp;xit</label>
         </object>
+        <label>&amp;File</label>
       </object>
-      <object class="wxMenu">
-        <label>Help</label>
+      <object class="wxMenu" name="_help">
         <object class="wxMenuItem" name="_about">
-          <label>About...</label>
+          <label>&amp;About...</label>
         </object>
+        <label>&amp;Help</label>
       </object>
     </object>
     <object class="wxBoxSizer">
@@ -23,8 +23,8 @@
               <object class="sizeritem">
                 <object class="wxBoxSizer">
                   <object class="sizeritem">
-                    <object class="wxStaticText">
-                      <label>Include Files:</label>
+                    <object class="wxStaticText" name="include_files_label">
+                      <label>&amp;Include Files:</label>
                     </object>
                     <flag>wxLEFT</flag>
                     <border>4</border>
@@ -36,8 +36,8 @@
                     <border>4</border>
                   </object>
                   <object class="sizeritem">
-                    <object class="wxStaticText">
-                      <label>Exclude Dirs:</label>
+                    <object class="wxStaticText" name="exclude_dirs_label">
+                      <label>E&amp;xclude Dirs:</label>
                     </object>
                     <flag>wxLEFT</flag>
                     <border>4</border>
@@ -55,8 +55,8 @@
               <object class="sizeritem">
                 <object class="wxBoxSizer">
                   <object class="sizeritem">
-                    <object class="wxStaticText">
-                      <label>Text:</label>
+                    <object class="wxStaticText" name="text_label">
+                      <label>&amp;Text:</label>
                     </object>
                     <flag>wxLEFT</flag>
                     <border>4</border>
@@ -68,8 +68,8 @@
                     <border>4</border>
                   </object>
                   <object class="sizeritem">
-                    <object class="wxStaticText">
-                      <label>Match case:</label>
+                    <object class="wxStaticText" name="match_case_label">
+                      <label>Match &amp;case:</label>
                     </object>
                     <flag>wxLEFT</flag>
                     <border>4</border>
@@ -80,8 +80,8 @@
                     <border>4</border>
                   </object>
                   <object class="sizeritem">
-                    <object class="wxStaticText">
-                      <label>Regex:</label>
+                    <object class="wxStaticText" name="regex_label">
+                      <label>Re&amp;gex:</label>
                     </object>
                     <flag>wxLEFT</flag>
                     <border>4</border>
@@ -99,15 +99,8 @@
               <object class="sizeritem">
                 <object class="wxBoxSizer">
                   <object class="sizeritem">
-                    <object class="wxStaticText">
-                      <label>Dir:</label>
-                    </object>
-                    <flag>wxLEFT</flag>
-                    <border>4</border>
-                  </object>
-                  <object class="sizeritem">
-                    <object class="wxButton" name="browse">
-                      <label>Browse</label>
+                    <object class="wxStaticText" name="directory_label">
+                      <label>&amp;Dir:</label>
                     </object>
                     <flag>wxLEFT</flag>
                     <border>4</border>
@@ -119,8 +112,16 @@
                     <border>4</border>
                   </object>
                   <object class="sizeritem">
-                    <object class="wxStaticText">
-                      <label>Recurse:</label>
+                    <object class="wxButton" name="browse">
+                      <label>&amp;Browse</label>
+                    </object>
+                    <flag>wxLEFT</flag>
+                    <border>4</border>
+                  </object>
+                  
+                  <object class="sizeritem">
+                    <object class="wxStaticText" name="recurse_label">
+                      <label>&amp;Recurse:</label>
                     </object>
                     <flag>wxLEFT</flag>
                     <border>4</border>
@@ -145,15 +146,14 @@
             <object class="wxStaticBoxSizer">
               <object class="sizeritem">
                 <object class="wxButton" name="start">
-                  <label>Start</label>
-                  <default>1</default>
+                  <label>St&amp;art</label>
                 </object>
                 <flag>wxLEFT|wxRIGHT|wxEXPAND</flag>
                 <border>4</border>
               </object>
               <object class="sizeritem">
                 <object class="wxButton" name="stop">
-                  <label>Stop</label>
+                  <label>St&amp;op</label>
                 </object>
                 <flag>wxLEFT|wxRIGHT|wxEXPAND</flag>
                 <border>4</border>
@@ -184,7 +184,7 @@
             <option>1</option>
             <flag>wxEXPAND</flag>
           </object>
-          <label>Matches</label>
+          <label>&amp;Matches</label>
           <orient>wxVERTICAL</orient>
         </object>
         <option>1</option>

@@ -25,9 +25,16 @@ In the results tree, you can select a row and then press _Enter_ to perform the 
 typically opening the file in your preferred editor.
 
 Similarly, on a results tree row you can click the right-hand mouse button to activate the context (pop-up) menu for that type of entry;
-then press _Enter_ for the selected action.
+then press _Enter_ for the selected action. Depending on OS, any keyboard context menu shortcuts are also supported for mouse-free operation. 
 
 When started from the command line, the program accepts an optional initial directory path argument.
+
+### Accelerator Keys
+Keyboard accelerator (shortcut) keys operate in the usual way; on some systems you may need to press the _Alt_ key to display the relevant underlined letter.
+Some further convenience accelerators are provided thus:
+- _Alt-Enter_ - starts search
+- _Escape_ - stops search
+- _Alt-M_ - set focus on _Matches_ result tree
 
 ### Windows Explorer Context Menu
 It is quite easy to add a Windows Explorer context menu entry to launch the searcher program for a particular directory, as follows:
@@ -36,7 +43,7 @@ It is quite easy to add a Windows Explorer context menu entry to launch the sear
 - In the _Create Shortcut_ wizard dialog, click _Browse_ and navigate to and select the `searcher.pyw` file
 - Proceed through the rest of the wizard in the usual way
 Now, on any folder shown in Windows Explorer you can activate the context menu, select _Send To_ for the new entry to start the searcher
-program with that folder as the pre-selected search directory.
+program with that folder as the pre-selected search directory. This facility does not generally require Administrator privileges.
 
 The above assumes a default Windows Python installation which has associated the `.pyw` file extension with the main Python interpreter executable;
 otherwise just specify the path to the interpreter followed by the path to the searcher source code. 
@@ -44,6 +51,8 @@ otherwise just specify the path to the interpreter followed by the path to the s
 ## Configuration
 The application is configured via the file `searcher.yaml` which is a simple [YAML](https://en.wikipedia.org/wiki/YAML) file.
 It is organized into sections by operating system, and entries can be customized for user preferences as described therein.
+On startup, the program searches first for this file in the user's home directory, then in the programs's own directory,
+and just uses the first one it finds.
 
 ## Development
 Note the UI is defined in `searcher.xrc` which is edited with the visual UI tool [XRCEd](https://wiki.wxpython.org/XRCed)
@@ -51,7 +60,6 @@ which is part of the standard wx distribution in package `wx.tools.XRCed.xrced`.
 
 ## To Do
 - Match for filename only
-- Keyboard accelerators 
 - Tabbing behaviour
 - Better icon
 - Status bar content

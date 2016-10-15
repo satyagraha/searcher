@@ -183,20 +183,24 @@ class Searcher:
     def __init__(self, resource_dir, resource_name):
 
         # data paths
-        yaml_path = os.path.join(resource_dir, resource_name + '.yaml')
+        yaml_dirs = [os.path.expanduser("~"), resource_dir] 
         resource_path = os.path.join(resource_dir, resource_name + '.xrc') 
         icon_path = os.path.join(resource_dir, resource_name + '.ico')
       
         # set up configs
-        with open(yaml_path) as yaml_stream:
-            all_config = AttrDict(yaml.load(yaml_stream))
-            os_key = "os." + sys.platform
-            platform_config = AttrDict(all_config[os_key])
-            print "platform_config", platform_config
-            self._common_config = AttrDict(platform_config.common)
-            self._activate_config = AttrDict(platform_config.activate)
-            self._context_config = AttrDict(platform_config.context)
-            self._settings_config = AttrDict(all_config.settings)
+        for yaml_dir in yaml_dirs:
+            yaml_path = os.path.join(yaml_dir, resource_name + '.yaml')
+            if os.access(yaml_path, os.R_OK):
+                with open(yaml_path) as yaml_stream:
+                    all_config = AttrDict(yaml.load(yaml_stream))
+                    os_key = "os." + sys.platform
+                    platform_config = AttrDict(all_config[os_key])
+                    print "platform_config", platform_config
+                    self._common_config = AttrDict(platform_config.common)
+                    self._activate_config = AttrDict(platform_config.activate)
+                    self._context_config = AttrDict(platform_config.context)
+                    self._settings_config = AttrDict(all_config.settings)
+                break
 
         # main frame
         dialog_xrc = xrc.XmlResource(resource_path)
@@ -208,6 +212,7 @@ class Searcher:
         
         self._ui = AttrDict()
         self._load_names(main_frame, dialog_xrc.GetResourceNode(root_node_name))
+        self._bind_accelerators()
         
         self._ui.main_frame.SetSize(size=self._settings_config.frame_size)
 
@@ -220,11 +225,11 @@ class Searcher:
         # options panel
         self._ui.include_files.SetValue(self._settings_config.include_files)
         self._ui.exclude_dirs.SetValue(self._settings_config.exclude_dirs)
-        self._ui.text.SetValue("include") ###
+        self._ui.text.SetValue("include")  # ##
         self._ui.match_case.SetValue(self._settings_config.match_case)
         self._ui.regex.SetValue(self._settings_config.regex)
         self._ui.main_frame.Bind(wx.EVT_BUTTON, self._browse, id=self._ui.browse_id)
-        self._ui.directory.SetValue(os.path.normpath("D:/development/python")) ###
+        self._ui.directory.SetValue(os.path.normpath("D:/development/python"))  # ##
         self._ui.recurse.SetValue(self._settings_config.recurse)
         
         # control panel
@@ -266,7 +271,8 @@ class Searcher:
 
         # event handler        
         self._ui.tree_list.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_tree_item_activated)
-        self._ui.tree_list.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self._on_tree_item_context_menu)
+        self._ui.tree_list.Bind(wx.EVT_CONTEXT_MENU, self._on_tree_item_context_menu)
+        self._ui.tree_list.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self._on_tree_item_right_click)
         
         # matching interface
         self._match_adapter = None
@@ -285,6 +291,39 @@ class Searcher:
         while child: 
             self._load_names(main_frame, child)
             child = child.GetNext()
+            
+    def _bind_accelerators(self):
+#         return
+        accelerators = []
+        def add_accelerator(acc_mod, acc_key, acc_handler):
+            acc_id = wx.NewId()
+            accelerators.append((acc_mod, acc_key, acc_id))
+            self._ui.main_frame.Bind(wx.EVT_MENU, acc_handler, None, acc_id)
+            
+        label_suffix = "_label"
+        acc_patt = re.compile(r'&([a-z])', re.IGNORECASE)
+        for label_name in self._ui.keys():
+            if label_name.endswith(label_suffix):
+                label = self._ui[label_name]
+                label_text = label.GetLabel()
+                control_name = label_name[:-len(label_suffix)]
+                control = self._ui[control_name]
+#                 print control_name
+                acc_match = acc_patt.search(label_text)
+                if acc_match:
+                    acc_letter = acc_match.group(1).upper()
+                    acc_handler = lambda event, control = control: self._accel_handler(event, control)
+                    add_accelerator(wx.ACCEL_ALT, ord(acc_letter), acc_handler) 
+        add_accelerator(wx.ACCEL_ALT, ord("A"), lambda event: self._accel_handler(event, self._ui.start))
+        add_accelerator(wx.ACCEL_ALT, ord("O"), lambda event: self._accel_handler(event, self._ui.stop))
+        add_accelerator(wx.ACCEL_ALT, ord("M"), lambda event: self._accel_handler(event, self._ui.tree_list))
+        add_accelerator(wx.ACCEL_ALT, wx.WXK_RETURN, self._start)
+        add_accelerator(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, self._stop)
+        self._ui.main_frame.SetAcceleratorTable(wx.AcceleratorTable(accelerators))
+            
+    def _accel_handler(self, event, control):
+        print event
+        control.SetFocus()
             
     def populate(self):
         self._ui.main_frame.Show()
@@ -329,7 +368,6 @@ class Searcher:
         self._ui.tree_root = self._ui.tree_list.AddRoot(self._start_path)
         self._matched_dirs = {}
         self._matched_files = {}
-#         match_criteria = MatchCriteria(self._start_path, [".git", ".svn"], ["*.py", "*.bat", "*.java"], "Im.*rt", False, True)
         self._match_adapter = MatchAdapter(self._ui.main_frame, match_criteria)
         self._match_adapter.start()
         self._ui.gauge.Pulse()
@@ -423,10 +461,25 @@ class Searcher:
         self._launch_process(match_result, template)
                 
     def _on_tree_item_context_menu(self, event):
+        item = self._ui.tree_list.GetSelection()
+        if not item.IsOk():
+            return
+        (tree_x, tree_y) = self._ui.tree_list.GetPositionTuple()
+        (item_x, item_y, item_w, item_d) = self._ui.tree_list.GetBoundingRect(item)
+        position = wx.Point(tree_x + item_x, tree_y + item_y)
+        self._show_tree_item_context_menu(item, position)
+
+    def _on_tree_item_right_click(self, event):
         item = event.GetItem()
+        if not item.IsOk():
+            return
+        position = event.GetPoint()
+        self._show_tree_item_context_menu(item, position)
+        
+    def _show_tree_item_context_menu(self, item, position):
         data = self._ui.tree_list.GetItemData(item)
         match_result = data.GetData() if data else None
-        print "_on_tree_item_context_menu", item, data, match_result
+#         print "_on_tree_item_context_menu", item, data, match_result
         if not match_result:
             return
         self._ui.popup_menu = wx.Menu()
@@ -436,7 +489,7 @@ class Searcher:
             menu_entry = self._ui.popup_menu.Append(-1, menu_text)
             menu_handler = lambda menu_event, template = template: self._handle_context(match_result, template)
             self._ui.main_frame.Bind(wx.EVT_MENU, menu_handler, menu_entry)
-        self._ui.main_frame.PopupMenu(self._ui.popup_menu, event.GetPoint())
+        self._ui.main_frame.PopupMenu(self._ui.popup_menu, position)
         self._ui.popup_menu.Destroy()
                         
     def _best_config_entry(self, config, match_result):
