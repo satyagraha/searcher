@@ -27,6 +27,8 @@ typically opening the file in your preferred editor.
 Similarly, on a results tree row you can click the right-hand mouse button to activate the context (pop-up) menu for that type of entry;
 then press _Enter_ for the selected action. Depending on OS, any keyboard context menu shortcuts are also supported for mouse-free operation. 
 
+If no search text is present, the search will simply display all matching filenames. 
+
 When started from the command line, the program accepts an optional initial directory path argument.
 
 ### Accelerator Keys
@@ -59,7 +61,6 @@ Note the UI is defined in `searcher.xrc` which is edited with the visual UI tool
 which is part of the standard wx distribution in package `wx.tools.XRCed.xrced`.
 
 ## To Do
-- Match for filename only
 - Tabbing behaviour
 - Better icon
 - Status bar content

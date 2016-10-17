@@ -10,6 +10,7 @@ import re
 import sys
 import subprocess
 import threading
+import traceback
 import yaml
 
 import  wx
@@ -69,30 +70,55 @@ class MatchCriteria:
         return self._matches_wildcards(filename, self._file_wildcards)
 
     def filter_sub_dirs(self, sub_dirs):
-        return [sub_dir for sub_dir in sub_dirs if not self._matches_wildcards(sub_dir, self._dir_exclusions)] if self._recurse else []
+        return [sub_dir for sub_dir in sub_dirs
+                 if not self._matches_wildcards(sub_dir, self._dir_exclusions)] if self._recurse else []
     
     def _matches_wildcards(self, name, wildcards):
         return any((fnmatch.fnmatch(name, wildcard) for wildcard in wildcards))
 
+###############################################################################
+
 class MatchResult(AttrDict):
-    def __init__(self, dir_path, filename, line_no, col_no, line):
+    def __init__(self):
         AttrDict.__init__(self)
+
+class MatchResultDir(MatchResult):
+    def __init__(self, dir_path):
+        MatchResult.__init__(self)
         self.dir_path = dir_path
+        
+    def as_dir_path(self):
+        return MatchResultDir(self.dir_path)
+        
+class MatchResultFile(MatchResultDir):
+    def __init__(self, dir_path, filename):
+        MatchResultDir.__init__(self, dir_path)
         self.filename = filename
-        self.file_path = os.path.join(dir_path, filename) if filename else None
+        self.file_path = os.path.join(dir_path, filename)
+
+    def as_file_path(self):
+        return MatchResultFile(self.dir_path, self.filename)
+    
+class MatchResultLine(MatchResultFile):
+    def __init__(self, dir_path, filename, line_no, col_no, line):
+        MatchResultFile.__init__(self, dir_path, filename)
         self.line_no = line_no
         self.col_no = col_no
         self.line = line
+
+class MatchResultException(MatchResult):
+    def __init__(self, ex):
+        MatchResult.__init__(self)
+        self.ex = ex 
+        self.message = traceback.format_exc()
+
+class MatchResultEnd(MatchResult):
+    def __init__(self):
+        MatchResult.__init__(self)
         
-    def as_dir_path(self):
-        return MatchResult(self.dir_path, None, None, None, None)
-        
-    def as_file_path(self):
-        return MatchResult(self.dir_path, self.filename, None, None, None)
+###############################################################################
                 
 class MatchingThread(threading.Thread):
-    
-    finished = MatchResult(None, None, None, None, None)
     
     def __init__(self, match_criteria, callback):
         threading.Thread.__init__(self)
@@ -105,8 +131,12 @@ class MatchingThread(threading.Thread):
         when you call Thread.start().
         """
         self._running = True
-        self._search()
-        self._finished()
+        try:
+            self._search()
+        except Exception as ex:
+            self._exception(ex)
+        finally:
+            self._finished()
 
     def _search(self):
         for dir_path, sub_dirs, filenames in os.walk(self._match_criteria._base_dir):
@@ -117,8 +147,8 @@ class MatchingThread(threading.Thread):
                     return
                 if not self._match_criteria.is_matching_filename(filename):
                     continue
-                if self._match_criteria.text_pattern is None:
-                    match_result = MatchResult(dir_path, filename, None, None)
+                if not self._match_criteria.text_pattern:
+                    match_result = MatchResultFile(dir_path, filename)
                     self._callback(self, match_result)
                     continue
                 line_no = 0
@@ -129,15 +159,20 @@ class MatchingThread(threading.Thread):
                     line_no += 1
                     col_no = self._match_criteria.matches(line)
                     if col_no != -1:
-                        match_result = MatchResult(dir_path, filename, line_no, col_no, line)
+                        match_result = MatchResultLine(dir_path, filename, line_no, col_no, line)
                         self._callback(self, match_result)
         
     def stop(self):
         print self, "stop"
         self._running = False
         
+    def _exception(self, ex):
+        match_ex = MatchResultException(ex)
+        self._callback(self, match_ex)
+    
     def _finished(self):
-        self._callback(self, MatchingThread.finished)
+        match_end = MatchResultEnd()
+        self._callback(self, match_end)
         
 ###############################################################################
             
@@ -399,13 +434,21 @@ class Searcher:
         if self._match_adapter:
             match_result = evt.get_value()
 #             print match_result.__dict__
-            if match_result == MatchingThread.finished:
+            if isinstance(match_result, MatchResultEnd):
                 self._finished()
+            elif isinstance(match_result, MatchResultException):
+                self._handle_exception(match_result)
             else:
                 self._handle_match(match_result)
             
+    def _handle_exception(self, match_ex):
+#         print '_handle_exception', match_ex
+        message_dialog = wx.MessageDialog(self._ui.main_frame, match_ex.message, "Exception", wx.ICON_ERROR)
+        message_dialog.ShowModal()
+        message_dialog.Destroy()
+        
     def _finished(self):
-        print '_finished'
+#         print '_finished'
         self._ui.gauge.SetValue(0)
         
     def _handle_match(self, match_result):
@@ -416,8 +459,8 @@ class Searcher:
         match_file_key = (match_result.dir_path, match_result.filename)
         if match_file_key not in self._matched_files:
             self._matched_files[match_file_key] = self._add_file_node(dir_node, match_result)
-        file_node = self._matched_files[match_file_key]
-        if match_result.line_no:
+        if isinstance(match_result, MatchResultLine):
+            file_node = self._matched_files[match_file_key]
             self._add_line_node(file_node, match_result)
             
     def _add_dir_node(self, match_result):
@@ -493,11 +536,11 @@ class Searcher:
         self._ui.popup_menu.Destroy()
                         
     def _best_config_entry(self, config, match_result):
-        if match_result.line_no:
+        if isinstance(match_result, MatchResultLine):
             return config.on_line
-        elif match_result.file_path:
+        elif isinstance(match_result, MatchResultFile):
             return config.on_file_path
-        elif match_result.dir_path:
+        elif isinstance(match_result, MatchResultDir):
             return config.on_dir_path
         else:
             raise Exception("unexpected: " + str(match_result))
