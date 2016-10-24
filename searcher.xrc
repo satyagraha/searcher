@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<resource class="spacer">
+<resource class="wxGauge">
   <object class="wxFrame" name="main_frame">
     <object class="wxMenuBar" name="_menu_bar">
       <object class="wxMenu" name="_file">
@@ -118,7 +118,6 @@
                     <flag>wxLEFT</flag>
                     <border>4</border>
                   </object>
-                  
                   <object class="sizeritem">
                     <object class="wxStaticText" name="recurse_label">
                       <label>&amp;Recurse:</label>
@@ -158,11 +157,7 @@
                 <flag>wxLEFT|wxRIGHT|wxEXPAND</flag>
                 <border>4</border>
               </object>
-              <object class="sizeritem">
-                <object class="wxGauge" name="gauge"/>
-                <flag>wxTOP</flag>
-                <border>10</border>
-              </object>
+              
               <label>Control</label>
               <orient>wxVERTICAL</orient>
             </object>

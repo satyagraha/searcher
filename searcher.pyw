@@ -10,6 +10,7 @@ import re
 import sys
 import subprocess
 import threading
+import time
 import traceback
 import yaml
 
@@ -78,10 +79,43 @@ class MatchCriteria:
 
 ###############################################################################
 
-class MatchResult(AttrDict):
+class MatchBase(AttrDict):
     def __init__(self):
         AttrDict.__init__(self)
 
+class MatchStatus(MatchBase):
+    def __init__(self):
+        MatchBase.__init__(self)
+
+class MatchStatusDir(MatchStatus):
+    def __init__(self, dir_path):
+        MatchStatus.__init__(self)
+        self.dir_path = dir_path
+
+class MatchStatusFoundCount(MatchStatus):
+    def __init__(self, found_count):
+        MatchStatus.__init__(self)
+        self.found_count = found_count
+
+class MatchStatusElapsedTime(MatchStatus):
+    def __init__(self, elapsed_time):
+        MatchStatus.__init__(self)
+        self.elapsed_time = elapsed_time
+
+class MatchStatusException(MatchStatus):
+    def __init__(self, ex):
+        MatchStatus.__init__(self)
+        self.ex = ex 
+        self.message = traceback.format_exc()
+
+class MatchStatusEnd(MatchStatus):
+    def __init__(self):
+        MatchStatus.__init__(self)
+
+class MatchResult(MatchBase):
+    def __init__(self):
+        MatchBase.__init__(self)
+    
 class MatchResultDir(MatchResult):
     def __init__(self, dir_path):
         MatchResult.__init__(self)
@@ -106,16 +140,6 @@ class MatchResultLine(MatchResultFile):
         self.col_no = col_no
         self.line = line
 
-class MatchResultException(MatchResult):
-    def __init__(self, ex):
-        MatchResult.__init__(self)
-        self.ex = ex 
-        self.message = traceback.format_exc()
-
-class MatchResultEnd(MatchResult):
-    def __init__(self):
-        MatchResult.__init__(self)
-        
 ###############################################################################
                 
 class MatchingThread(threading.Thread):
@@ -131,15 +155,22 @@ class MatchingThread(threading.Thread):
         when you call Thread.start().
         """
         self._running = True
+        self._started_at = time.time()
         try:
             self._search()
         except Exception as ex:
             self._exception(ex)
         finally:
+            self._send_elapsed()
             self._finished()
 
     def _search(self):
+        found_count = 0
         for dir_path, sub_dirs, filenames in os.walk(self._match_criteria._base_dir):
+            dir_status = MatchStatusDir(dir_path)
+            self._callback(self, dir_status)
+            self._send_found_count(found_count)
+            self._send_elapsed()
             # print "sub_dirs", sub_dirs
             sub_dirs[:] = self._match_criteria.filter_sub_dirs(sub_dirs)
             for filename in filenames:
@@ -148,6 +179,7 @@ class MatchingThread(threading.Thread):
                 if not self._match_criteria.is_matching_filename(filename):
                     continue
                 if not self._match_criteria.text_pattern:
+                    found_count += 1
                     match_result = MatchResultFile(dir_path, filename)
                     self._callback(self, match_result)
                     continue
@@ -159,19 +191,30 @@ class MatchingThread(threading.Thread):
                     line_no += 1
                     col_no = self._match_criteria.matches(line)
                     if col_no != -1:
+                        found_count += 1
                         match_result = MatchResultLine(dir_path, filename, line_no, col_no, line)
                         self._callback(self, match_result)
-        
+        self._send_found_count(found_count)
+
+    def _send_found_count(self, found_count):
+        found_count_status = MatchStatusFoundCount(found_count)
+        self._callback(self, found_count_status)
+                
+    def _send_elapsed(self):
+        elapsed_time = time.time() - self._started_at
+        elapsed_time_status = MatchStatusElapsedTime(elapsed_time)
+        self._callback(self, elapsed_time_status)
+                
     def stop(self):
         print self, "stop"
         self._running = False
         
     def _exception(self, ex):
-        match_ex = MatchResultException(ex)
+        match_ex = MatchStatusException(ex)
         self._callback(self, match_ex)
     
     def _finished(self):
-        match_end = MatchResultEnd()
+        match_end = MatchStatusEnd()
         self._callback(self, match_end)
         
 ###############################################################################
@@ -251,7 +294,7 @@ class Searcher:
         
         self._ui.main_frame.SetSize(size=self._settings_config.frame_size)
 
-        self._ui.main_frame.Bind(wx.EVT_CLOSE, self._on_close, id=self._ui.main_frame_id)
+        self._ui.main_frame.Bind(wx.EVT_CLOSE, self._on_close)
         
         ib = wx.IconBundle()
         ib.AddIconFromFile(icon_path, wx.BITMAP_TYPE_ANY)
@@ -308,6 +351,12 @@ class Searcher:
         self._ui.tree_list.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self._on_tree_item_activated)
         self._ui.tree_list.Bind(wx.EVT_CONTEXT_MENU, self._on_tree_item_context_menu)
         self._ui.tree_list.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self._on_tree_item_right_click)
+        
+        # status bar
+        self._ui.gauge = wx.Gauge(self._ui.status_bar)
+        self._ui.status_bar.SetFieldsCount(3)
+        self._ui.status_bar.SetStatusWidths([-2, -1, -1])
+        self._ui.status_bar.Bind(wx.EVT_SIZE, self._on_size_status_bar)
         
         # matching interface
         self._match_adapter = None
@@ -374,6 +423,16 @@ class Searcher:
         if len(sys.argv) > 1:
             self._ui.directory.SetValue(sys.argv[1]) 
 
+    def _on_size_status_bar(self, event):
+#         print "_on_size_status_bar", event
+        status_bar_size = self._ui.status_bar.GetSize()
+        gauge_width = 200
+        gauge_border = 2
+        gauge_pos = wx.Point(status_bar_size.GetWidth() - gauge_width - gauge_border, gauge_border)
+        gauge_size = wx.Size(gauge_width, status_bar_size.GetHeight() - 2 * gauge_border)
+        self._ui.gauge.SetSize(gauge_size)
+        self._ui.gauge.SetPosition(gauge_pos)
+        
     def _on_close(self, event):
         print "_on_close", event
         self._stop(event)
@@ -434,13 +493,31 @@ class Searcher:
         if self._match_adapter:
             match_result = evt.get_value()
 #             print match_result.__dict__
-            if isinstance(match_result, MatchResultEnd):
+            if isinstance(match_result, MatchStatusDir):
+                self._handle_status_dir(match_result)
+            elif isinstance(match_result, MatchStatusFoundCount):
+                self._handle_status_found_count(match_result)
+            elif isinstance(match_result, MatchStatusElapsedTime):
+                self._handle_status_elapsed_time(match_result)
+            elif isinstance(match_result, MatchStatusEnd):
                 self._finished()
-            elif isinstance(match_result, MatchResultException):
+            elif isinstance(match_result, MatchStatusException):
                 self._handle_exception(match_result)
             else:
                 self._handle_match(match_result)
             
+    def _handle_status_dir(self, status_dir):
+        message = "Searching: " + status_dir.dir_path
+        self._ui.status_bar.SetStatusText(message, 0)
+        
+    def _handle_status_found_count(self, status_found_count):
+        message = "Found: " + str(status_found_count.found_count)
+        self._ui.status_bar.SetStatusText(message, 1)
+        
+    def _handle_status_elapsed_time(self, status_elapsed_time):
+        message = "Elapsed: " + ("%.1f" % status_elapsed_time.elapsed_time) + "s"
+        self._ui.status_bar.SetStatusText(message, 2)
+        
     def _handle_exception(self, match_ex):
 #         print '_handle_exception', match_ex
         message_dialog = wx.MessageDialog(self._ui.main_frame, match_ex.message, "Exception", wx.ICON_ERROR)

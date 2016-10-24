@@ -42,6 +42,7 @@ os.win32:
       - [Notepad++, "{notepad_pp}", "{file_path}"]
       - [Emacs, "{emacs_bin}\\emacsclientw.exe", "-na", "{emacs_bin}\\runemacs.exe", "{file_path}"]
       - [Copy Path to Clipboard, "copy_file_path"]
+      - [Start, "start", "{file_path}"]
     on_line:
       - [Notepad++, "{notepad_pp}", "{file_path}", "-n{line_no}", "-c{col_no}"]
       - [Emacs, "{emacs_bin}\\emacsclientw.exe", "-na", "{emacs_bin}\\runemacs.exe", "+{line_no}:{col_no}", "{file_path}"]

@@ -63,7 +63,6 @@ which is part of the standard wx distribution in package `wx.tools.XRCed.xrced`.
 ## To Do
 - Tabbing behaviour
 - Better icon
-- Status bar content
 
 ## History
 1.0.0 Initial version
